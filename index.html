@@ -3,812 +3,719 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Flappy Bird Deluxe</title>
+    <title>3D Flappy Bird: Pro Edition</title>
     <style>
-        :root {
-            --ui-bg: rgba(0, 0, 0, 0.7);
-            --ui-text: #fff;
-            --primary: #f1c40f;
-            --danger: #e74c3c;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
-        body {
-            background-color: #222;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            overflow: hidden;
-            font-family: 'Courier New', Courier, monospace;
-        }
-        #game-container {
-            position: relative;
-            width: 100%;
-            max-width: 400px;
-            height: 100%;
-            max-height: 600px;
-            background: #000;
-            box-shadow: 0 0 20px rgba(0,0,0,0.8);
-            overflow: hidden;
-        }
-        canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-        }
-        .screen {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background: var(--ui-bg);
-            color: var(--ui-text);
-            z-index: 10;
-            transition: opacity 0.3s;
-        }
-        .hidden { display: none !important; }
+        /* --- CSS RESET & BASE STYLES --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background-color: #87CEEB; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; user-select: none; touch-action: none; }
+        #game-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; display: block; }
         
-        h1 { font-size: 32px; margin-bottom: 20px; color: var(--primary); text-shadow: 2px 2px 0 #000; text-align: center;}
-        h2 { font-size: 24px; margin-bottom: 10px; }
-        p { font-size: 16px; margin-bottom: 20px; text-align: center; line-height: 1.5; }
+        /* --- UI OVERLAYS --- */
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .screen { display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(0, 0, 0, 0.7); padding: 40px; border-radius: 20px; text-align: center; color: white; box-shadow: 0 10px 40px rgba(0,0,0,0.6); backdrop-filter: blur(8px); transition: opacity 0.3s ease, transform 0.3s ease; border: 2px solid rgba(255,255,255,0.15); pointer-events: auto; }
+        .hidden { opacity: 0; pointer-events: none; visibility: hidden; transform: scale(0.9); position: absolute; }
         
-        button {
-            background: var(--primary);
-            color: #000;
-            border: 2px solid #fff;
-            padding: 12px 24px;
-            font-size: 18px;
-            font-weight: bold;
-            font-family: inherit;
-            cursor: pointer;
-            margin: 10px;
-            border-radius: 8px;
-            box-shadow: 0 4px 0 #b7950b;
-            transition: transform 0.1s, box-shadow 0.1s;
-        }
-        button:active {
-            transform: translateY(4px);
-            box-shadow: 0 0 0 #b7950b;
-        }
+        h1 { font-size: 3rem; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        p { font-size: 1.2rem; margin-bottom: 20px; color: #ddd; }
         
-        #hud {
-            position: absolute;
-            top: 10px; left: 10px; right: 10px;
-            display: flex;
-            justify-content: space-between;
-            z-index: 5;
-            pointer-events: none;
-            text-shadow: 2px 2px 0 #000;
-            font-size: 20px;
-            color: white;
-            font-weight: bold;
-        }
+        /* --- HUD (HEADS UP DISPLAY) --- */
+        #hud-top { position: absolute; top: 20px; left: 20px; right: 20px; display: flex; justify-content: space-between; z-index: 5; pointer-events: none; }
+        .hud-item { font-size: 1.5rem; font-weight: bold; color: white; text-shadow: 0 3px 6px rgba(0,0,0,0.8); background: rgba(0,0,0,0.3); padding: 8px 16px; border-radius: 20px; backdrop-filter: blur(4px); }
+        #score-display { font-size: 3rem; position: absolute; top: 20px; left: 50%; transform: translateX(-50%); color: white; font-weight: 900; text-shadow: 0 4px 8px rgba(0,0,0,0.8); transition: transform 0.1s; }
         
-        .powerup-indicator {
-            font-size: 14px;
-            color: #fff;
-            background: rgba(0,0,0,0.5);
-            padding: 2px 8px;
-            border-radius: 10px;
-            margin-top: 5px;
-            display: none;
-        }
+        /* --- MOBILE CONTROLS & BUTTONS --- */
+        .btn { pointer-events: auto; background: rgba(255, 255, 255, 0.2); border: 2px solid white; color: white; padding: 12px 24px; font-size: 1.2rem; border-radius: 30px; cursor: pointer; text-transform: uppercase; font-weight: bold; transition: all 0.2s; backdrop-filter: blur(4px); margin-top: 10px; }
+        .btn:hover, .btn:active { background: white; color: black; transform: scale(1.05); }
+        
+        #hud-bottom { position: absolute; bottom: 20px; left: 20px; right: 20px; display: flex; justify-content: space-between; align-items: flex-end; z-index: 5; pointer-events: none; }
+        #cam-btn { pointer-events: auto; background: rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.5); border-radius: 50%; width: 60px; height: 60px; font-size: 24px; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: all 0.2s; backdrop-filter: blur(4px); }
+        #cam-btn:active { transform: scale(0.9); background: rgba(255,255,255,0.3); }
+        
+        #ability-btn { pointer-events: auto; background: linear-gradient(135deg, #ff416c, #ff4b2b); border: none; color: white; padding: 12px 20px; border-radius: 30px; font-weight: bold; font-size: 1rem; box-shadow: 0 4px 15px rgba(255, 75, 43, 0.5); opacity: 0.5; transition: all 0.3s; transform: scale(0.9); }
+        #ability-btn.ready { opacity: 1; transform: scale(1); cursor: pointer; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 75, 43, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(255, 75, 43, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 75, 43, 0); } }
 
-        #shop-container { display: flex; gap: 10px; margin-bottom: 20px; }
-        .shop-item {
-            border: 2px solid #fff;
-            border-radius: 8px;
-            padding: 10px;
-            text-align: center;
-            cursor: pointer;
-            background: rgba(255,255,255,0.1);
-        }
-        .shop-item.active { border-color: var(--primary); background: rgba(241, 196, 15, 0.3); }
-        .shop-item.locked { opacity: 0.5; }
-        
-        #mute-btn {
-            position: absolute;
-            bottom: 10px; right: 10px;
-            background: rgba(0,0,0,0.5);
-            border: none; color: white; padding: 10px;
-            border-radius: 50%; font-size: 16px; cursor: pointer; z-index: 20;
-            box-shadow: none; width: 40px; height: 40px;
-            display: flex; justify-content: center; align-items: center;
-        }
+        /* --- RANKINGS --- */
+        .rank-badge { margin: 15px 0; padding: 10px 20px; border-radius: 10px; font-size: 1.5rem; font-weight: bold; display: inline-block; text-transform: uppercase; letter-spacing: 2px; }
+        .rank-wood { background: #8b5a2b; color: #f5deb3; border: 2px solid #5c3a21; }
+        .rank-bronze { background: #cd7f32; color: #fff; border: 2px solid #8c561b; }
+        .rank-silver { background: #c0c0c0; color: #fff; border: 2px solid #808080; }
+        .rank-gold { background: #ffd700; color: #fff; border: 2px solid #b8860b; box-shadow: 0 0 15px rgba(255, 215, 0, 0.6); }
+        .rank-platinum { background: linear-gradient(45deg, #e5e4e2, #b0e0e6, #e5e4e2); color: #2f4f4f; border: 2px solid #fff; box-shadow: 0 0 20px rgba(176, 224, 230, 0.8); }
+
     </style>
+    
+    <!-- ES Module Import Map for Three.js -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+            }
+        }
+    </script>
 </head>
 <body>
-
-<div id="game-container">
-    <canvas id="gameCanvas" width="400" height="600"></canvas>
+    <canvas id="game-canvas"></canvas>
     
-    <div id="hud" class="hidden">
-        <div>
-            Score: <span id="scoreVal">0</span><br>
-            <div id="powerupVal" class="powerup-indicator"></div>
-        </div>
-        <div style="text-align: right;">
-            Best: <span id="highScoreVal">0</span><br>
-            🪙: <span id="coinValHud">0</span>
-        </div>
-    </div>
-
-    <div id="startScreen" class="screen">
-        <h1>FLAPPY BIRD<br>DELUXE</h1>
-        <div id="shop-container">
-            <div class="shop-item active" data-skin="0" data-cost="0">
-                <div style="width: 30px; height: 30px; background: #f1c40f; border-radius: 50%; margin: 0 auto 5px;"></div>
-                Classic<br>Free
-            </div>
-            <div class="shop-item locked" data-skin="1" data-cost="50">
-                <div style="width: 30px; height: 30px; background: #e74c3c; border-radius: 50%; margin: 0 auto 5px;"></div>
-                Ruby<br>50 🪙
-            </div>
-            <div class="shop-item locked" data-skin="2" data-cost="150">
-                <div style="width: 30px; height: 30px; background: #3498db; border-radius: 5px; margin: 0 auto 5px;"></div>
-                Ninja<br>150 🪙
-            </div>
-        </div>
-        <p>Total Coins: <span id="menuCoinVal">0</span></p>
-        <button id="startBtn">PLAY GAME</button>
-        <p style="font-size: 12px; margin-top: 10px;">Space / Click / Touch to Flap</p>
-    </div>
-
-    <div id="gameOverScreen" class="screen hidden">
-        <h1 style="color: var(--danger)">GAME OVER</h1>
-        <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; text-align: center; margin-bottom: 20px;">
-            <h2 id="medalDisplay" style="font-size: 40px; margin: 0;"></h2>
-            <p>Score: <span id="goScoreVal" style="font-size: 24px; font-weight: bold; color: var(--primary);">0</span></p>
-            <p>Best: <span id="goHighScoreVal">0</span></p>
-            <p>Coins Collected: +<span id="goCoinsVal" style="color: #f1c40f;">0</span></p>
-        </div>
-        <button id="restartBtn">RETRY (R)</button>
-        <button id="menuBtn" style="background: #7f8c8d; box-shadow: 0 4px 0 #555;">MAIN MENU</button>
+    <div id="hud-top">
+        <div class="hud-item" id="high-score">🏆 0</div>
+        <div class="hud-item" id="coin-counter">🪙 0</div>
     </div>
     
-    <button id="mute-btn">🔊</button>
-</div>
+    <div id="score-display">0</div>
 
-<script>
-    // --- SETUP & GLOBALS ---
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    
-    // UI Elements
-    const screens = {
-        start: document.getElementById('startScreen'),
-        game: document.getElementById('hud'),
-        over: document.getElementById('gameOverScreen')
-    };
-    
-    let gameState = 'START'; // START, PLAYING, GAMEOVER
-    let score = 0, coins = 0, sessionCoins = 0;
-    let highScore = localStorage.getItem('fb_highscore') || 0;
-    let totalCoins = parseInt(localStorage.getItem('fb_coins')) || 0;
-    let unlockedSkins = JSON.parse(localStorage.getItem('fb_skins')) || [0];
-    let currentSkin = parseInt(localStorage.getItem('fb_currentSkin')) || 0;
-    
-    let frames = 0;
-    let timeScale = 1.0; 
-    let dayNightFactor = 0; // 0 = Day, 1 = Night
+    <div id="hud-bottom">
+        <button id="ability-btn">Shield (Needs 5 🪙)</button>
+        <div id="cam-btn" title="Change Camera">🎥</div>
+    </div>
 
-    // --- AUDIO SYSTEM (Web Audio API) ---
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    let audioCtx;
-    let isMuted = false;
-
-    function initAudio() {
-        if (!audioCtx) audioCtx = new AudioContext();
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-    }
-
-    function playSound(type) {
-        if (isMuted || !audioCtx) return;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
+    <div id="ui-layer">
+        <!-- Start Screen -->
+        <div id="start-screen" class="screen">
+            <h1>Flappy Pro</h1>
+            <p>Tap, Click, or Space to fly.</p>
+            <p style="font-size: 0.9rem; color: #aaa;">Collect 🪙 to unlock shields. Break pipes!</p>
+            <button class="btn" id="start-btn">Start Game</button>
+        </div>
         
-        const now = audioCtx.currentTime;
+        <!-- Game Over Screen -->
+        <div id="game-over-screen" class="screen hidden">
+            <h1 style="color: #ff4444;">Crash!</h1>
+            <div id="rank-display" class="rank-badge rank-wood">Wood Rank</div>
+            <p id="final-score-text">Score: 0</p>
+            <button class="btn" id="restart-btn">Play Again</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // --- PROCEDURAL AUDIO GENERATOR ---
+        // Self-contained sound effects to prevent external asset loading issues
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const SoundFX = {
+            playTone: (freq, type, duration, vol=0.1, slideFreq=null) => {
+                if(audioCtx.state === 'suspended') audioCtx.resume();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                if (slideFreq) osc.frequency.exponentialRampToValueAtTime(slideFreq, audioCtx.currentTime + duration);
+                
+                gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+                
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            },
+            flap: () => SoundFX.playTone(150, 'sine', 0.15, 0.2, 50),
+            score: () => {
+                SoundFX.playTone(800, 'square', 0.1, 0.05);
+                setTimeout(() => SoundFX.playTone(1200, 'square', 0.15, 0.05), 100);
+            },
+            coin: () => SoundFX.playTone(1200, 'sine', 0.1, 0.1, 2000),
+            crash: () => {
+                SoundFX.playTone(100, 'sawtooth', 0.3, 0.3, 40);
+                setTimeout(() => SoundFX.playTone(80, 'square', 0.2, 0.3, 20), 100);
+            },
+            shieldOn: () => SoundFX.playTone(400, 'sine', 0.5, 0.2, 800),
+            shieldBreak: () => SoundFX.playTone(300, 'square', 0.3, 0.4, 50)
+        };
+
+        // --- GAME CONSTANTS & STATE ---
+        const CONSTANTS = {
+            GRAVITY: 45,
+            JUMP_VELOCITY: 16,
+            GAME_SPEED: 14,
+            PIPE_SPAWN_X: 40,
+            PIPE_SPACING: 18,
+            PIPE_GAP: 6.5,
+            PIPE_WIDTH: 2.5,
+            CLOUD_SPEED: 2,
+            COINS_FOR_SHIELD: 5
+        };
+
+        let state = {
+            mode: 'START', // START, PLAYING, GAMEOVER
+            score: 0,
+            coins: 0,
+            highScore: localStorage.getItem('fbp_highscore') || 0,
+            velocity_y: 0,
+            cameraMode: 0, // 0: Classic, 1: POV, 2: Third-Person
+            wingAngle: 0,
+            time: 0,
+            totalPipesSpawned: 0,
+            shieldActive: false
+        };
+
+        // --- DOM ELEMENTS ---
+        const uiStart = document.getElementById('start-screen');
+        const uiGameOver = document.getElementById('game-over-screen');
+        const scoreEl = document.getElementById('score-display');
+        const highScoreEl = document.getElementById('high-score');
+        const coinEl = document.getElementById('coin-counter');
+        const finalScoreEl = document.getElementById('final-score-text');
+        const rankDisplay = document.getElementById('rank-display');
+        const camBtn = document.getElementById('cam-btn');
+        const abilityBtn = document.getElementById('ability-btn');
+        const startBtn = document.getElementById('start-btn');
+        const restartBtn = document.getElementById('restart-btn');
         
-        switch(type) {
-            case 'flap':
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(300, now);
-                osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
-                gain.gain.setValueAtTime(0.3, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-                osc.start(now); osc.stop(now + 0.1);
-                break;
-            case 'score':
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(800, now);
-                gain.gain.setValueAtTime(0.2, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-                osc.start(now); osc.stop(now + 0.1);
-                setTimeout(() => {
-                    if(isMuted) return;
-                    const osc2 = audioCtx.createOscillator();
-                    const gain2 = audioCtx.createGain();
-                    osc2.connect(gain2); gain2.connect(audioCtx.destination);
-                    osc2.type = 'square';
-                    osc2.frequency.setValueAtTime(1200, audioCtx.currentTime);
-                    gain2.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                    gain2.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-                    osc2.start(audioCtx.currentTime); osc2.stop(audioCtx.currentTime + 0.1);
-                }, 100);
-                break;
-            case 'hit':
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(150, now);
-                osc.frequency.exponentialRampToValueAtTime(50, now + 0.3);
-                gain.gain.setValueAtTime(0.5, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-                osc.start(now); osc.stop(now + 0.3);
-                break;
-            case 'powerup':
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(400, now);
-                osc.frequency.linearRampToValueAtTime(800, now + 0.1);
-                osc.frequency.linearRampToValueAtTime(1200, now + 0.2);
-                gain.gain.setValueAtTime(0.3, now);
-                gain.gain.linearRampToValueAtTime(0, now + 0.3);
-                osc.start(now); osc.stop(now + 0.3);
-                break;
-        }
-    }
+        highScoreEl.innerText = `🏆 ${state.highScore}`;
 
-    document.getElementById('mute-btn').addEventListener('click', (e) => {
-        isMuted = !isMuted;
-        e.target.innerText = isMuted ? '🔇' : '🔊';
-    });
+        // --- THREE.JS SETUP ---
+        const canvas = document.getElementById('game-canvas');
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); // Optimize mobile performance
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
 
-    // --- GRAPHICS & UTILS ---
-    function lerpColor(c1, c2, t) {
-        const hex2rgb = (hex) => hex.match(/\w\w/g).map(x => parseInt(x, 16));
-        const rgb1 = hex2rgb(c1), rgb2 = hex2rgb(c2);
-        const r = Math.round(rgb1[0] + (rgb2[0] - rgb1[0]) * t);
-        const g = Math.round(rgb1[1] + (rgb2[1] - rgb1[1]) * t);
-        const b = Math.round(rgb1[2] + (rgb2[2] - rgb1[2]) * t);
-        return `rgb(${r},${g},${b})`;
-    }
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x60a0ff);
+        // INCREASED FOG: Helps mask the exact moment pipes spawn/despawn in the distance
+        scene.fog = new THREE.Fog(0x60a0ff, 15, 60); 
 
-    // --- GAME OBJECTS ---
-    const config = {
-        gravity: 0.25,
-        jump: -5.5,
-        speed: 2.5,
-        pipeWidth: 60,
-        pipeGap: 160
-    };
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 150);
 
-    const skins = [
-        { color: '#f1c40f', eye: '#fff', shape: 'circle' },
-        { color: '#e74c3c', eye: '#000', shape: 'circle' },
-        { color: '#3498db', eye: '#fff', shape: 'square' }
-    ];
+        // --- LIGHTING ---
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.7);
+        scene.add(hemiLight);
 
-    let bird = {
-        x: 100, y: 300, w: 30, h: 30,
-        vy: 0, rotation: 0,
-        shield: false, multiplier: 1,
-        reset() {
-            this.y = 300; this.vy = 0; this.rotation = 0;
-            this.shield = false; this.multiplier = 1; timeScale = 1.0;
-        },
-        draw() {
-            ctx.save();
-            ctx.translate(this.x, this.y);
-            this.rotation = Math.min(Math.PI / 4, Math.max(-Math.PI / 4, (this.vy * 0.1)));
-            ctx.rotate(this.rotation);
-            
-            const skin = skins[currentSkin];
-            
-            // Shield Aura
-            if (this.shield) {
-                ctx.beginPath();
-                ctx.arc(0, 0, 25, 0, Math.PI * 2);
-                ctx.fillStyle = 'rgba(52, 152, 219, 0.4)';
-                ctx.fill();
-                ctx.strokeStyle = '#3498db';
-                ctx.lineWidth = 2;
-                ctx.stroke();
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+        dirLight.position.set(10, 30, 20);
+        dirLight.castShadow = true;
+        dirLight.shadow.camera.top = 20;
+        dirLight.shadow.camera.bottom = -20;
+        dirLight.shadow.camera.left = -20;
+        dirLight.shadow.camera.right = 30;
+        dirLight.shadow.camera.near = 0.1;
+        dirLight.shadow.camera.far = 80;
+        dirLight.shadow.mapSize.width = 1024;
+        dirLight.shadow.mapSize.height = 1024;
+        scene.add(dirLight);
+
+        // --- SEAMLESS PROCEDURAL GROUND ---
+        // Instead of moving a mesh (which causes "chunks" or pops), we use a massive stationary plane
+        // and animate its texture offset. This guarantees 100% smooth visual scrolling.
+        function createGroundTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const context = canvas.getContext('2d');
+            // Draw grass base
+            context.fillStyle = '#4aa02c';
+            context.fillRect(0, 0, 512, 512);
+            // Draw darker alternating strips for speed reference
+            context.fillStyle = '#429026';
+            for (let i = 0; i < 512; i += 64) {
+                context.fillRect(i, 0, 32, 512);
             }
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.wrapT = THREE.RepeatWrapping;
+            tex.repeat.set(50, 10);
+            return tex;
+        }
 
-            ctx.fillStyle = skin.color;
-            if (skin.shape === 'circle') {
-                ctx.beginPath();
-                ctx.arc(0, 0, this.w/2, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
+        const groundTex = createGroundTexture();
+        // Create an enormously wide plane that exceeds the camera frustum completely
+        const groundGeo = new THREE.PlaneGeometry(300, 100);
+        const groundMat = new THREE.MeshStandardMaterial({ map: groundTex, roughness: 1.0 });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = -10;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        // --- CLOUDS ---
+        const clouds = new THREE.Group();
+        const cloudGeo = new THREE.IcosahedronGeometry(1, 1);
+        const cloudMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1.0, flatShading: true });
+        for (let i = 0; i < 20; i++) {
+            const cluster = new THREE.Group();
+            const puffCount = 3 + Math.random() * 4;
+            for(let j=0; j<puffCount; j++) {
+                const puff = new THREE.Mesh(cloudGeo, cloudMat);
+                puff.position.set((Math.random()-0.5)*3, (Math.random()-0.5)*1.5, (Math.random()-0.5)*2);
+                const s = 1 + Math.random() * 2;
+                puff.scale.set(s, s, s);
+                cluster.add(puff);
+            }
+            // Spread clouds widely
+            cluster.position.set(Math.random() * 140 - 40, 10 + Math.random() * 20, -15 - Math.random() * 30);
+            clouds.add(cluster);
+        }
+        scene.add(clouds);
+
+        // --- THE BIRD ---
+        const bird = new THREE.Group();
+        
+        const bodyGeo = new THREE.SphereGeometry(0.7, 16, 16); 
+        const bodyMat = new THREE.MeshStandardMaterial({ color: 0xffcc00, roughness: 0.5 });
+        const body = new THREE.Mesh(bodyGeo, bodyMat);
+        body.castShadow = true;
+        
+        const bellyGeo = new THREE.SphereGeometry(0.65, 16, 16);
+        const bellyMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8 });
+        const belly = new THREE.Mesh(bellyGeo, bellyMat);
+        belly.position.set(0.1, -0.15, 0);
+        
+        const beakGeo = new THREE.ConeGeometry(0.2, 0.6, 12);
+        const beakMat = new THREE.MeshStandardMaterial({ color: 0xff6600, roughness: 0.4 });
+        const beak = new THREE.Mesh(beakGeo, beakMat);
+        beak.rotation.z = -Math.PI / 2;
+        beak.position.set(0.8, 0, 0);
+        beak.castShadow = true;
+
+        const eyeGeo = new THREE.SphereGeometry(0.15, 8, 8);
+        const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+        const pupilGeo = new THREE.SphereGeometry(0.06, 8, 8);
+        const pupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+        
+        const rightEye = new THREE.Group();
+        const re = new THREE.Mesh(eyeGeo, eyeMat);
+        const rp = new THREE.Mesh(pupilGeo, pupilMat);
+        rp.position.set(0.1, 0, 0.1);
+        rightEye.add(re, rp);
+        rightEye.position.set(0.4, 0.25, 0.3);
+
+        const leftEye = new THREE.Group();
+        const le = new THREE.Mesh(eyeGeo, eyeMat);
+        const lp = new THREE.Mesh(pupilGeo, pupilMat);
+        lp.position.set(0.1, 0, -0.1);
+        leftEye.add(le, lp);
+        leftEye.position.set(0.4, 0.25, -0.3);
+
+        const wingGeo = new THREE.CapsuleGeometry(0.15, 0.6, 4, 8);
+        const wingMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6 });
+        
+        const rightWing = new THREE.Mesh(wingGeo, wingMat);
+        rightWing.rotation.x = Math.PI / 2;
+        rightWing.position.set(-0.2, 0, 0.7);
+        rightWing.castShadow = true;
+
+        const leftWing = new THREE.Mesh(wingGeo, wingMat);
+        leftWing.rotation.x = Math.PI / 2;
+        leftWing.position.set(-0.2, 0, -0.7);
+        leftWing.castShadow = true;
+
+        // Shield Mesh (Invisible by default)
+        const shieldGeo = new THREE.SphereGeometry(1.2, 16, 16);
+        const shieldMat = new THREE.MeshStandardMaterial({ color: 0x00ffff, transparent: true, opacity: 0.4, wireframe: true });
+        const shieldMesh = new THREE.Mesh(shieldGeo, shieldMat);
+        shieldMesh.visible = false;
+
+        bird.add(body, belly, beak, rightEye, leftEye, rightWing, leftWing, shieldMesh);
+        scene.add(bird);
+
+        // --- PROCEDURAL PIPES & COINS ---
+        const pipes = [];
+        const pipeMaterial = new THREE.MeshStandardMaterial({ color: 0x22cc44, roughness: 0.4, metalness: 0.1 });
+        const shaftGeo = new THREE.CylinderGeometry(CONSTANTS.PIPE_WIDTH/2, CONSTANTS.PIPE_WIDTH/2, 30, 16);
+        const rimGeo = new THREE.CylinderGeometry(CONSTANTS.PIPE_WIDTH/2 + 0.2, CONSTANTS.PIPE_WIDTH/2 + 0.2, 1, 16);
+        
+        // Coin Geometry
+        const coinGeo = new THREE.TorusGeometry(0.4, 0.15, 8, 16);
+        const coinMat = new THREE.MeshStandardMaterial({ color: 0xffd700, roughness: 0.2, metalness: 0.8 });
+
+        function createPipeObject() {
+            const pair = new THREE.Group();
+            
+            const topPipe = new THREE.Group();
+            const topShaft = new THREE.Mesh(shaftGeo, pipeMaterial);
+            topShaft.position.y = 15; 
+            topShaft.castShadow = true;
+            topShaft.receiveShadow = true;
+            const topRim = new THREE.Mesh(rimGeo, pipeMaterial);
+            topRim.position.y = 0.5;
+            topRim.castShadow = true;
+            topPipe.add(topShaft, topRim);
+
+            const botPipe = new THREE.Group();
+            const botShaft = new THREE.Mesh(shaftGeo, pipeMaterial);
+            botShaft.position.y = -15;
+            botShaft.castShadow = true;
+            botShaft.receiveShadow = true;
+            const botRim = new THREE.Mesh(rimGeo, pipeMaterial);
+            botRim.position.y = -0.5;
+            botRim.castShadow = true;
+            botPipe.add(botShaft, botRim);
+
+            // Add a coin in the center
+            const coin = new THREE.Mesh(coinGeo, coinMat);
+            coin.castShadow = true;
+
+            pair.add(topPipe, botPipe, coin);
+            pair.userData = { passed: false, currentGap: 0, topBroken: false, botBroken: false, coinActive: true };
+            
+            scene.add(pair);
+            pipes.push(pair);
+            return pair;
+        }
+
+        function setupPipe(pair, spawnIndex, xPos) {
+            pair.position.x = xPos;
+            pair.userData.passed = false;
+            pair.userData.topBroken = false;
+            pair.userData.botBroken = false;
+            
+            // Restore visibility if previously broken by shield
+            pair.children[0].visible = true; 
+            pair.children[1].visible = true;
+
+            // 50% chance to spawn a coin if we haven't maxed out ability logic
+            pair.userData.coinActive = Math.random() > 0.5;
+            pair.children[2].visible = pair.userData.coinActive;
+            
+            let currentGap = CONSTANTS.PIPE_GAP;
+            let gapY = 0;
+            
+            // Starting stage easing (15 pillars easy)
+            if (spawnIndex < 15) {
+                const gapBonus = (15 - spawnIndex) * 0.4;
+                currentGap = CONSTANTS.PIPE_GAP + gapBonus;
+                const maxVariance = (spawnIndex / 15) * 8; 
+                gapY = (Math.random() - 0.5) * maxVariance;
             } else {
-                ctx.fillRect(-this.w/2, -this.h/2, this.w, this.h);
-                ctx.strokeRect(-this.w/2, -this.h/2, this.w, this.h);
+                gapY = (Math.random() - 0.5) * 8; 
             }
-
-            // Eye
-            ctx.fillStyle = skin.eye;
-            ctx.beginPath();
-            ctx.arc(8, -5, 4, 0, Math.PI * 2);
-            ctx.fill();
             
-            // Wing (flapping animation)
-            const wingY = Math.sin(frames * 0.5) * 5;
-            ctx.fillStyle = '#fff';
-            ctx.beginPath();
-            ctx.ellipse(-5, 5 + wingY, 10, 5, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-
-            // Beak
-            ctx.fillStyle = '#e67e22';
-            ctx.beginPath();
-            ctx.moveTo(12, 0);
-            ctx.lineTo(22, 5);
-            ctx.lineTo(12, 10);
-            ctx.fill();
-
-            ctx.restore();
-        },
-        update() {
-            this.vy += config.gravity * timeScale;
-            this.y += this.vy * timeScale;
-        },
-        flap() {
-            this.vy = config.jump;
-            playSound('flap');
-            spawnParticles(this.x, this.y, 5, '#fff');
+            pair.position.y = gapY;
+            pair.userData.currentGap = currentGap;
+            
+            pair.children[0].position.y = currentGap / 2;
+            pair.children[1].position.y = -currentGap / 2;
+            pair.children[2].position.y = 0; // Coin exactly in center of gap
         }
-    };
 
-    let pipes = [];
-    let powerups = [];
-    let particles = [];
-
-    function spawnParticles(x, y, count, color, speed = 2) {
-        for(let i=0; i<count; i++) {
-            particles.push({
-                x, y,
-                vx: (Math.random() - 0.5) * speed,
-                vy: (Math.random() - 0.5) * speed,
-                life: 1.0,
-                color
-            });
+        // Initialize Object Pool
+        for (let i = 0; i < 7; i++) {
+            const pair = createPipeObject();
+            setupPipe(pair, state.totalPipesSpawned++, CONSTANTS.PIPE_SPAWN_X + i * CONSTANTS.PIPE_SPACING);
         }
-    }
 
-    const bg = {
-        layer1: 0, layer2: 0, layer3: 0,
-        draw() {
-            // Sky gradient (Day/Night)
-            const dayColor = '71C5CF';
-            const nightColor = '001D3D';
-            const currentSky = lerpColor(dayColor, nightColor, dayNightFactor);
-            ctx.fillStyle = currentSky;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Sun/Moon
-            ctx.fillStyle = dayNightFactor < 0.5 ? '#f1c40f' : '#ecf0f1';
-            ctx.beginPath();
-            ctx.arc(canvas.width - 50, 100 + (dayNightFactor * 50), 30, 0, Math.PI*2);
-            ctx.fill();
-
-            // Clouds (Layer 1)
-            ctx.fillStyle = `rgba(255,255,255,${0.8 - dayNightFactor*0.5})`;
-            this.layer1 -= 0.5 * timeScale;
-            if (this.layer1 <= -400) this.layer1 = 0;
-            for(let i=0; i<3; i++) {
-                ctx.beginPath();
-                ctx.arc(this.layer1 + 100 + i*400, 150, 40, 0, Math.PI*2);
-                ctx.arc(this.layer1 + 140 + i*400, 150, 30, 0, Math.PI*2);
-                ctx.fill();
-            }
-
-            // City (Layer 2)
-            ctx.fillStyle = lerpColor('82A890', '1A2C38', dayNightFactor);
-            this.layer2 -= 1 * timeScale;
-            if (this.layer2 <= -400) this.layer2 = 0;
-            for(let i=0; i<6; i++) {
-                ctx.fillRect(this.layer2 + i*80, canvas.height - 150, 60, 150);
-            }
-
-            // Ground (Layer 3)
-            ctx.fillStyle = '#ded895';
-            this.layer3 -= config.speed * timeScale;
-            if (this.layer3 <= -canvas.width) this.layer3 = 0;
-            ctx.fillRect(this.layer3, canvas.height - 50, canvas.width * 2, 50);
-            ctx.strokeStyle = '#d0c870';
-            ctx.lineWidth = 5;
-            ctx.beginPath();
-            ctx.moveTo(this.layer3, canvas.height - 50);
-            ctx.lineTo(this.layer3 + canvas.width*2, canvas.height - 50);
-            ctx.stroke();
-        }
-    };
-
-    function resetGame() {
-        bird.reset();
-        pipes = [];
-        powerups = [];
-        particles = [];
-        score = 0;
-        sessionCoins = 0;
-        frames = 0;
-        dayNightFactor = 0;
-        updateHUD();
-        spawnPipe();
-    }
-
-    function spawnPipe() {
-        // Dynamic Difficulty
-        const gap = Math.max(90, config.pipeGap - (score * 1.5)); 
-        const minHeight = 50;
-        const maxPos = canvas.height - 50 - gap - minHeight;
-        const yPos = Math.floor(Math.random() * (maxPos - minHeight + 1) + minHeight);
+        // --- CAMERA LOGIC ---
+        const currentCamPos = new THREE.Vector3(3, 2, 20);
+        const currentLookAt = new THREE.Vector3(5, -1, 0);
+        const targetCamPos = new THREE.Vector3();
+        const targetLookAt = new THREE.Vector3();
         
-        let moving = false;
-        let speed = 0;
-        if (score > 10 && Math.random() > 0.5) {
-            moving = true;
-            speed = (Math.random() > 0.5 ? 1 : -1) * (1 + (score/30));
-        }
-
-        pipes.push({
-            x: canvas.width,
-            top: yPos,
-            bottom: yPos + gap,
-            w: config.pipeWidth,
-            passed: false,
-            moving: moving,
-            vy: speed,
-            baseTop: yPos
-        });
-
-        // Spawn Powerup/Coin (20% chance per pipe)
-        if (Math.random() < 0.2) {
-            const types = ['coin', 'shield', '2x', 'slowmo'];
-            const type = types[Math.floor(Math.random() * types.length)];
-            powerups.push({
-                x: canvas.width + config.pipeWidth/2,
-                y: yPos + gap/2,
-                type: type,
-                r: 12
-            });
-        }
-    }
-
-    // --- MAIN LOOP ---
-    function update() {
-        if (gameState !== 'PLAYING') return;
-
-        frames++;
-        
-        // Target dayNightFactor based on score (oscillates every 10 points)
-        const targetDayNight = (Math.floor(score / 10) % 2 === 0) ? 0 : 1;
-        dayNightFactor += (targetDayNight - dayNightFactor) * 0.05;
-
-        bird.update();
-
-        // Ground/Ceiling Collision
-        if (bird.y + bird.h/2 >= canvas.height - 50 || bird.y - bird.h/2 <= 0) {
-            gameOver();
-        }
-
-        // Pipe Logic
-        for (let i = pipes.length - 1; i >= 0; i--) {
-            let p = pipes[i];
-            p.x -= config.speed * timeScale;
-
-            if (p.moving) {
-                p.top += p.vy * timeScale;
-                p.bottom += p.vy * timeScale;
-                if (p.top > p.baseTop + 50 || p.top < p.baseTop - 50) p.vy *= -1;
+        function updateCamera(delta) {
+            if (state.cameraMode === 0) { // Classic
+                targetCamPos.set(bird.position.x + 4, bird.position.y + 2, 22);
+                targetLookAt.set(bird.position.x + 6, bird.position.y - 1, 0);
+            } else if (state.cameraMode === 1) { // POV
+                targetCamPos.set(bird.position.x + 0.5, bird.position.y + 0.2, 0);
+                targetLookAt.set(bird.position.x + 20, bird.position.y - (state.velocity_y * 0.1), 0);
+            } else if (state.cameraMode === 2) { // Third Person Follow
+                targetCamPos.set(bird.position.x - 8, bird.position.y + 4, 0);
+                targetLookAt.set(bird.position.x + 10, bird.position.y - 1, 0);
             }
 
-            // Collision Box for Bird
-            const bx = bird.x - bird.w/2 + 5; 
-            const by = bird.y - bird.h/2 + 5;
-            const bw = bird.w - 10;
-            const bh = bird.h - 10;
+            const lerpFactor = 8 * delta; 
+            currentCamPos.lerp(targetCamPos, lerpFactor);
+            currentLookAt.lerp(targetLookAt, lerpFactor);
 
-            // Collision Check
-            if (bx + bw > p.x && bx < p.x + p.w && (by < p.top || by + bh > p.bottom)) {
-                if (bird.shield) {
-                    bird.shield = false;
-                    spawnParticles(bird.x, bird.y, 20, '#3498db', 5);
-                    playSound('hit'); // Shield break sound
-                    pipes.splice(i, 1); // Destroy pipe
-                    continue;
-                } else {
-                    gameOver();
+            camera.position.copy(currentCamPos);
+            camera.lookAt(currentLookAt);
+        }
+
+        // --- MECHANICS & LOGIC ---
+        function setRankDisplay() {
+            rankDisplay.className = 'rank-badge'; // reset
+            let rank = 'Wood';
+            let rClass = 'rank-wood';
+            if (state.score >= 11 && state.score <= 20) { rank = 'Bronze'; rClass = 'rank-bronze'; }
+            else if (state.score >= 21 && state.score <= 40) { rank = 'Silver'; rClass = 'rank-silver'; }
+            else if (state.score >= 41 && state.score <= 70) { rank = 'Gold'; rClass = 'rank-gold'; }
+            else if (state.score >= 71) { rank = 'Platinum'; rClass = 'rank-platinum'; }
+            
+            rankDisplay.innerText = `${rank} Rank`;
+            rankDisplay.classList.add(rClass);
+        }
+
+        function activateShield(e) {
+            if (e) { e.preventDefault(); e.stopPropagation(); }
+            if (state.coins >= CONSTANTS.COINS_FOR_SHIELD && !state.shieldActive && state.mode === 'PLAYING') {
+                state.coins -= CONSTANTS.COINS_FOR_SHIELD;
+                state.shieldActive = true;
+                shieldMesh.visible = true;
+                SoundFX.shieldOn();
+                updateUI();
+            }
+        }
+
+        function jump(e) {
+            // Prevent double-firing if clicking a button
+            if (e && e.target && e.target.tagName === 'BUTTON') return;
+            if (e && e.target && e.target.id === 'cam-btn') return;
+
+            if (state.mode === 'START') {
+                state.mode = 'PLAYING';
+                uiStart.classList.add('hidden');
+                state.velocity_y = CONSTANTS.JUMP_VELOCITY;
+                SoundFX.flap();
+            } else if (state.mode === 'PLAYING') {
+                state.velocity_y = CONSTANTS.JUMP_VELOCITY;
+                bird.rotation.z = Math.PI / 4; 
+                SoundFX.flap();
+            } else if (state.mode === 'GAMEOVER') {
+                resetGame();
+            }
+        }
+
+        function updateUI() {
+            scoreEl.innerText = state.score;
+            coinEl.innerText = `🪙 ${state.coins}`;
+            if (state.coins >= CONSTANTS.COINS_FOR_SHIELD && !state.shieldActive) {
+                abilityBtn.classList.add('ready');
+                abilityBtn.innerText = "🛡️ ACTIVATE SHIELD!";
+            } else {
+                abilityBtn.classList.remove('ready');
+                abilityBtn.innerText = `Shield (Needs ${CONSTANTS.COINS_FOR_SHIELD} 🪙)`;
+            }
+        }
+
+        function gameOver() {
+            if (state.mode === 'GAMEOVER') return;
+            state.mode = 'GAMEOVER';
+            SoundFX.crash();
+            
+            if (state.score > state.highScore) {
+                state.highScore = state.score;
+                localStorage.setItem('fbp_highscore', state.highScore);
+                highScoreEl.innerText = `🏆 ${state.highScore}`;
+            }
+            
+            setRankDisplay();
+            finalScoreEl.innerText = `Score: ${state.score}  |  Coins: ${state.coins}`;
+            uiGameOver.classList.remove('hidden');
+            bird.rotation.z = -Math.PI / 2; 
+        }
+
+        function resetGame() {
+            state.score = 0;
+            state.velocity_y = 0;
+            state.totalPipesSpawned = 0;
+            state.shieldActive = false;
+            shieldMesh.visible = false;
+            
+            updateUI();
+            
+            bird.position.set(0, 0, 0);
+            bird.rotation.set(0, 0, 0);
+            
+            pipes.forEach((pair, index) => {
+                setupPipe(pair, state.totalPipesSpawned++, CONSTANTS.PIPE_SPAWN_X + index * CONSTANTS.PIPE_SPACING);
+            });
+            
+            uiGameOver.classList.add('hidden');
+            uiStart.classList.remove('hidden');
+            state.mode = 'START';
+        }
+
+        const birdSphere = new THREE.Sphere(new THREE.Vector3(), 0.55);
+        const topBox = new THREE.Box3();
+        const botBox = new THREE.Box3();
+        const coinBox = new THREE.Box3();
+
+        function checkCollisions() {
+            birdSphere.center.copy(bird.position);
+            
+            if (bird.position.y < -9 || bird.position.y > 17) {
+                gameOver();
+                return;
+            }
+
+            for (let i = 0; i < pipes.length; i++) {
+                const pair = pipes[i];
+                if (Math.abs(pair.position.x - bird.position.x) > CONSTANTS.PIPE_WIDTH + 2) continue;
+
+                const gapY = pair.position.y;
+                const gap = pair.userData.currentGap;
+
+                // Coin Collection
+                if (pair.userData.coinActive) {
+                    coinBox.setFromObject(pair.children[2]);
+                    if (coinBox.intersectsSphere(birdSphere)) {
+                        pair.userData.coinActive = false;
+                        pair.children[2].visible = false;
+                        state.coins++;
+                        SoundFX.coin();
+                        updateUI();
+                    }
+                }
+
+                // Pipe Collisions
+                let hitTop = false;
+                let hitBot = false;
+
+                if (!pair.userData.topBroken) {
+                    topBox.min.set(pair.position.x - CONSTANTS.PIPE_WIDTH/2, gapY + gap/2, -CONSTANTS.PIPE_WIDTH/2);
+                    topBox.max.set(pair.position.x + CONSTANTS.PIPE_WIDTH/2, 30, CONSTANTS.PIPE_WIDTH/2);
+                    if (topBox.intersectsSphere(birdSphere)) hitTop = true;
+                }
+
+                if (!pair.userData.botBroken) {
+                    botBox.min.set(pair.position.x - CONSTANTS.PIPE_WIDTH/2, -30, -CONSTANTS.PIPE_WIDTH/2);
+                    botBox.max.set(pair.position.x + CONSTANTS.PIPE_WIDTH/2, gapY - gap/2, CONSTANTS.PIPE_WIDTH/2);
+                    if (botBox.intersectsSphere(birdSphere)) hitBot = true;
+                }
+
+                if (hitTop || hitBot) {
+                    if (state.shieldActive) {
+                        // Break Shield and Pipe
+                        state.shieldActive = false;
+                        shieldMesh.visible = false;
+                        SoundFX.shieldBreak();
+                        
+                        if (hitTop) {
+                            pair.userData.topBroken = true;
+                            pair.children[0].visible = false;
+                        } else {
+                            pair.userData.botBroken = true;
+                            pair.children[1].visible = false;
+                        }
+                    } else {
+                        gameOver();
+                        break;
+                    }
                 }
             }
+        }
 
-            // Score
-            if (p.x + p.w < bird.x - bird.w/2 && !p.passed) {
-                p.passed = true;
-                score += (1 * bird.multiplier);
-                playSound('score');
-                spawnParticles(bird.x, bird.y, 15, '#f1c40f');
-                updateHUD();
+        // --- EVENT LISTENERS ---
+        window.addEventListener('mousedown', jump);
+        window.addEventListener('touchstart', (e) => { 
+            if(e.target.tagName !== 'BUTTON' && e.target.id !== 'cam-btn') {
+                e.preventDefault(); jump(); 
             }
-
-            // Remove offscreen
-            if (p.x + p.w < 0) pipes.splice(i, 1);
-        }
-
-        // Pipe Spawner
-        if (frames % Math.floor(120 / (timeScale === 0.5 ? 0.5 : 1)) === 0) spawnPipe();
-
-        // Powerup Logic
-        for (let i = powerups.length - 1; i >= 0; i--) {
-            let pu = powerups[i];
-            pu.x -= config.speed * timeScale;
-            pu.y += Math.sin(frames * 0.1) * 1; // Bobbing
-
-            // Distance based collision
-            const dist = Math.hypot(bird.x - pu.x, bird.y - pu.y);
-            if (dist < bird.w/2 + pu.r) {
-                collectPowerup(pu.type);
-                powerups.splice(i, 1);
-            } else if (pu.x + pu.r < 0) {
-                powerups.splice(i, 1);
-            }
-        }
-
-        // Particle Logic
-        for (let i = particles.length - 1; i >= 0; i--) {
-            let pt = particles[i];
-            pt.x += pt.vx; pt.y += pt.vy; pt.life -= 0.05;
-            if (pt.life <= 0) particles.splice(i, 1);
-        }
-    }
-
-    function draw() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }, { passive: false });
         
-        bg.draw();
-
-        if (gameState === 'START') {
-            bird.y = 300 + Math.sin(Date.now() * 0.005) * 20; // Hover
-            bird.draw();
-            return;
-        }
-
-        // Draw Pipes
-        for (let p of pipes) {
-            // Gradient Pipes
-            const grad = ctx.createLinearGradient(p.x, 0, p.x + p.w, 0);
-            grad.addColorStop(0, '#2ecc71');
-            grad.addColorStop(0.5, '#27ae60');
-            grad.addColorStop(1, '#2ecc71');
-            ctx.fillStyle = grad;
-            ctx.strokeStyle = '#1e8449';
-            ctx.lineWidth = 2;
-
-            // Top Pipe
-            ctx.fillRect(p.x, 0, p.w, p.top);
-            ctx.strokeRect(p.x, 0, p.w, p.top);
-            // Top Pipe Cap
-            ctx.fillRect(p.x - 5, p.top - 20, p.w + 10, 20);
-            ctx.strokeRect(p.x - 5, p.top - 20, p.w + 10, 20);
-
-            // Bottom Pipe
-            ctx.fillRect(p.x, p.bottom, p.w, canvas.height - p.bottom - 50);
-            ctx.strokeRect(p.x, p.bottom, p.w, canvas.height - p.bottom - 50);
-            // Bottom Pipe Cap
-            ctx.fillRect(p.x - 5, p.bottom, p.w + 10, 20);
-            ctx.strokeRect(p.x - 5, p.bottom, p.w + 10, 20);
-        }
-
-        // Draw Powerups
-        for (let pu of powerups) {
-            ctx.beginPath();
-            ctx.arc(pu.x, pu.y, pu.r, 0, Math.PI*2);
-            if (pu.type === 'coin') {
-                ctx.fillStyle = '#f1c40f'; ctx.strokeStyle = '#d4ac0d';
-            } else if (pu.type === 'shield') {
-                ctx.fillStyle = '#3498db'; ctx.strokeStyle = '#2980b9';
-            } else if (pu.type === '2x') {
-                ctx.fillStyle = '#9b59b6'; ctx.strokeStyle = '#8e44ad';
-            } else if (pu.type === 'slowmo') {
-                ctx.fillStyle = '#e67e22'; ctx.strokeStyle = '#d35400';
-            }
-            ctx.fill(); ctx.stroke();
-            
-            // Icon inside
-            ctx.fillStyle = '#fff';
-            ctx.font = '10px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            let icon = pu.type === 'coin' ? '🪙' : (pu.type === 'shield' ? 'S' : (pu.type === '2x' ? '2x' : '⏳'));
-            ctx.fillText(icon, pu.x, pu.y);
-        }
-
-        // Draw Particles
-        for (let pt of particles) {
-            ctx.fillStyle = pt.color;
-            ctx.globalAlpha = pt.life;
-            ctx.beginPath();
-            ctx.arc(pt.x, pt.y, 3, 0, Math.PI*2);
-            ctx.fill();
-        }
-        ctx.globalAlpha = 1.0;
-
-        bird.draw();
-    }
-
-    let powerupTimer = null;
-    function collectPowerup(type) {
-        playSound('powerup');
-        spawnParticles(bird.x, bird.y, 10, '#fff');
-        
-        const puLabel = document.getElementById('powerupVal');
-        puLabel.style.display = 'inline-block';
-
-        if (type === 'coin') {
-            sessionCoins++;
-            totalCoins++;
-            updateHUD();
-            puLabel.style.display = 'none';
-        } else if (type === 'shield') {
-            bird.shield = true;
-            puLabel.innerText = "Shield Active!";
-            puLabel.style.background = "#3498db";
-            setTimeout(() => { if(bird.shield) puLabel.style.display='none'; }, 2000);
-        } else if (type === '2x') {
-            bird.multiplier = 2;
-            puLabel.innerText = "2x Score! (8s)";
-            puLabel.style.background = "#9b59b6";
-            clearTimeout(powerupTimer);
-            powerupTimer = setTimeout(() => { bird.multiplier = 1; puLabel.style.display='none'; }, 8000);
-        } else if (type === 'slowmo') {
-            timeScale = 0.6;
-            puLabel.innerText = "Slow-Mo! (5s)";
-            puLabel.style.background = "#e67e22";
-            clearTimeout(powerupTimer);
-            powerupTimer = setTimeout(() => { timeScale = 1.0; puLabel.style.display='none'; }, 5000);
-        }
-    }
-
-    function gameOver() {
-        gameState = 'GAMEOVER';
-        playSound('hit');
-        spawnParticles(bird.x, bird.y, 30, '#e74c3c', 6);
-        timeScale = 1.0;
-        
-        if (score > highScore) {
-            highScore = score;
-            localStorage.setItem('fb_highscore', highScore);
-        }
-        localStorage.setItem('fb_coins', totalCoins);
-
-        document.getElementById('powerupVal').style.display = 'none';
-        screens.game.classList.add('hidden');
-        screens.over.classList.remove('hidden');
-        
-        document.getElementById('goScoreVal').innerText = score;
-        document.getElementById('goHighScoreVal').innerText = highScore;
-        document.getElementById('goCoinsVal').innerText = sessionCoins;
-
-        let medal = '🥉 Bronze';
-        if (score >= 40) medal = '💎 Platinum';
-        else if (score >= 30) medal = '🥇 Gold';
-        else if (score >= 20) medal = '🥈 Silver';
-        else if (score < 10) medal = '😢 No Medal';
-        document.getElementById('medalDisplay').innerText = medal;
-    }
-
-    function updateHUD() {
-        document.getElementById('scoreVal').innerText = score;
-        document.getElementById('highScoreVal').innerText = highScore;
-        document.getElementById('coinValHud').innerText = sessionCoins;
-        document.getElementById('menuCoinVal').innerText = totalCoins;
-        updateShopUI();
-    }
-
-    function updateShopUI() {
-        const items = document.querySelectorAll('.shop-item');
-        items.forEach(item => {
-            const skinId = parseInt(item.getAttribute('data-skin'));
-            const cost = parseInt(item.getAttribute('data-cost'));
-            
-            if (unlockedSkins.includes(skinId)) {
-                item.classList.remove('locked');
-                item.innerHTML = item.innerHTML.replace(/\d+ 🪙/, 'Unlocked');
-            } else if (totalCoins >= cost) {
-                item.classList.remove('locked');
-            } else {
-                item.classList.add('locked');
-            }
-
-            if (skinId === currentSkin) {
-                item.classList.add('active');
-            } else {
-                item.classList.remove('active');
-            }
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') { e.preventDefault(); jump(); }
+            if (e.code === 'KeyC') { cycleCamera(); }
         });
-    }
 
-    // --- INPUT HANDLERS ---
-    function handleInput() {
-        initAudio();
-        if (gameState === 'START') {
-            gameState = 'PLAYING';
-            screens.start.classList.add('hidden');
-            screens.game.classList.remove('hidden');
-            resetGame();
-            bird.flap();
-        } else if (gameState === 'PLAYING') {
-            bird.flap();
-        } else if (gameState === 'GAMEOVER') {
-            // Need to press restart button to restart
+        camBtn.addEventListener('click', (e) => { e.stopPropagation(); cycleCamera(); });
+        camBtn.addEventListener('touchstart', (e) => { e.stopPropagation(); e.preventDefault(); cycleCamera(); }, { passive: false });
+        
+        abilityBtn.addEventListener('click', activateShield);
+        abilityBtn.addEventListener('touchstart', activateShield, { passive: false });
+        
+        startBtn.addEventListener('click', jump);
+        restartBtn.addEventListener('click', jump);
+
+        function cycleCamera() {
+            state.cameraMode = (state.cameraMode + 1) % 3;
+            // Provide mild haptic feedback if available on mobile
+            if (navigator.vibrate) navigator.vibrate(50);
         }
-    }
 
-    window.addEventListener('keydown', (e) => {
-        if (e.code === 'Space' || e.code === 'ArrowUp') handleInput();
-        if (e.code === 'KeyR' && gameState === 'GAMEOVER') document.getElementById('restartBtn').click();
-    });
-    
-    // Use canvas specifically for game interaction to not mess with UI clicks
-    canvas.addEventListener('mousedown', handleInput);
-    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleInput(); }, {passive: false});
-
-    // --- UI EVENT LISTENERS ---
-    document.getElementById('startBtn').addEventListener('click', () => {
-        initAudio(); handleInput();
-    });
-
-    document.getElementById('restartBtn').addEventListener('click', () => {
-        screens.over.classList.add('hidden');
-        screens.game.classList.remove('hidden');
-        gameState = 'PLAYING';
-        resetGame();
-    });
-
-    document.getElementById('menuBtn').addEventListener('click', () => {
-        screens.over.classList.add('hidden');
-        screens.start.classList.remove('hidden');
-        gameState = 'START';
-        updateHUD();
-    });
-
-    // Shop Logic
-    document.querySelectorAll('.shop-item').forEach(item => {
-        item.addEventListener('click', (e) => {
-            const skinId = parseInt(item.getAttribute('data-skin'));
-            const cost = parseInt(item.getAttribute('data-cost'));
-
-            if (unlockedSkins.includes(skinId)) {
-                currentSkin = skinId;
-                localStorage.setItem('fb_currentSkin', currentSkin);
-                updateShopUI();
-            } else if (totalCoins >= cost) {
-                totalCoins -= cost;
-                unlockedSkins.push(skinId);
-                currentSkin = skinId;
-                localStorage.setItem('fb_coins', totalCoins);
-                localStorage.setItem('fb_skins', JSON.stringify(unlockedSkins));
-                localStorage.setItem('fb_currentSkin', currentSkin);
-                updateHUD();
-            }
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
         });
-    });
 
-    // --- LOOP ---
-    function loop() {
-        update();
-        draw();
-        requestAnimationFrame(loop);
-    }
+        // --- RENDER LOOP ---
+        const clock = new THREE.Clock();
 
-    // Init
-    updateHUD();
-    loop();
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const delta = Math.min(clock.getDelta(), 0.05); // Frame capping
+            state.time += delta;
 
-</script>
+            if (state.mode === 'START') {
+                bird.position.y = Math.sin(state.time * 4) * 0.5;
+                bird.rotation.z = Math.sin(state.time * 2) * 0.1;
+                rightWing.rotation.z = Math.sin(state.time * 10) * 0.4;
+                leftWing.rotation.z = -Math.sin(state.time * 10) * 0.4;
+            } 
+            else if (state.mode === 'PLAYING') {
+                state.velocity_y -= CONSTANTS.GRAVITY * delta;
+                bird.position.y += state.velocity_y * delta;
+                
+                const targetRotationZ = Math.min(Math.PI / 4, Math.max(-Math.PI / 2, state.velocity_y * 0.05));
+                bird.rotation.z += (targetRotationZ - bird.rotation.z) * 15 * delta;
+
+                const wingSpeed = state.velocity_y > 0 ? 30 : 5;
+                state.wingAngle += wingSpeed * delta;
+                rightWing.rotation.z = Math.sin(state.wingAngle) * 0.5;
+                leftWing.rotation.z = -Math.sin(state.wingAngle) * 0.5;
+
+                // Animate shield if active
+                if(state.shieldActive) {
+                    shieldMesh.rotation.x += delta;
+                    shieldMesh.rotation.y += delta * 2;
+                }
+
+                const moveDist = CONSTANTS.GAME_SPEED * delta;
+                
+                for (let i = 0; i < pipes.length; i++) {
+                    const pair = pipes[i];
+                    pair.position.x -= moveDist;
+                    
+                    // Rotate coins
+                    if(pair.userData.coinActive) {
+                        pair.children[2].rotation.y += delta * 3;
+                    }
+                    
+                    if (!pair.userData.passed && pair.position.x < bird.position.x) {
+                        pair.userData.passed = true;
+                        state.score++;
+                        SoundFX.score();
+                        updateUI();
+                        scoreEl.style.transform = 'translateX(-50%) scale(1.4)';
+                        setTimeout(() => scoreEl.style.transform = 'translateX(-50%) scale(1)', 150);
+                    }
+                    
+                    // Recycle logic (Seamless behind fog)
+                    if (pair.position.x < bird.position.x - 20) {
+                        let maxX = -Infinity;
+                        for(let j=0; j<pipes.length; j++) if(pipes[j].position.x > maxX) maxX = pipes[j].position.x;
+                        setupPipe(pair, state.totalPipesSpawned++, maxX + CONSTANTS.PIPE_SPACING);
+                    }
+                }
+                checkCollisions();
+            }
+            else if (state.mode === 'GAMEOVER') {
+                if (bird.position.y > -9) {
+                    state.velocity_y -= CONSTANTS.GRAVITY * 1.5 * delta;
+                    bird.position.y += state.velocity_y * delta;
+                }
+                rightWing.rotation.z = 0;
+                leftWing.rotation.z = 0;
+            }
+
+            // Background Animations
+            clouds.children.forEach(cluster => {
+                cluster.position.x -= CONSTANTS.CLOUD_SPEED * delta;
+                if (cluster.position.x < -60) cluster.position.x = 100;
+            });
+            
+            // Seamless Ground Texture Scrolling (No chunks!)
+            if (state.mode !== 'GAMEOVER') {
+                // Adjust texture offset based on game speed
+                groundTex.offset.x -= (CONSTANTS.GAME_SPEED / 50) * delta;
+            }
+
+            updateCamera(delta);
+            renderer.render(scene, camera);
+        }
+
+        // Initialize Audio context on first interaction
+        document.body.addEventListener('pointerdown', () => {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }, { once: true });
+
+        updateUI();
+        animate();
+    </script>
 </body>
 </html>
